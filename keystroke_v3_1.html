@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>keystroke | Minimalist Typing Canvas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Curated Modern Themes Architecture */
+        :root[data-theme="zinc-dark"] {
+            --bg-gradient: radial-gradient(circle at 50% -20%, rgba(63, 63, 70, 0.3), transparent 45rem), #09090b;
+            --glass-bg: rgba(24, 24, 27, 0.65);
+            --glass-border: rgba(244, 244, 245, 0.08);
+            --text-main: #f4f4f5;
+            --text-sub: #71717a;
+            --text-muted: #3f3f46;
+            --accent-glow: #d4d4d8;
+            --error-color: #ef4444;
+            --error-bg: rgba(239, 68, 68, 0.1);
+        }
+
+        :root[data-theme="frosted-glass"] {
+            --bg-gradient: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+            --glass-bg: rgba(255, 255, 255, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --text-main: #1e293b;
+            --text-sub: #64748b;
+            --text-muted: #cbd5e1;
+            --accent-glow: #3b82f6;
+            --error-color: #dc2626;
+            --error-bg: rgba(220, 38, 38, 0.08);
+        }
+
+        :root[data-theme="nord-frost"] {
+            --bg-gradient: radial-gradient(circle at 50% -20%, rgba(143, 188, 187, 0.2), transparent 45rem), #2e3440;
+            --glass-bg: rgba(43, 49, 60, 0.65);
+            --glass-border: rgba(136, 192, 208, 0.12);
+            --text-main: #eceff4;
+            --text-sub: #4c566a;
+            --text-muted: #3b4252;
+            --accent-glow: #88c0d0;
+            --error-color: #bf616a;
+            --error-bg: rgba(191, 97, 106, 0.1);
+        }
+
+        :root[data-theme="sepia-paper"] {
+            --bg-gradient: radial-gradient(circle at 50% -20%, rgba(139, 92, 26, 0.1), transparent 45rem), #f4ecd8;
+            --glass-bg: rgba(234, 224, 200, 0.6);
+            --glass-border: rgba(67, 53, 32, 0.08);
+            --text-main: #433520;
+            --text-sub: #a08f75;
+            --text-muted: #c0b39d;
+            --accent-glow: #8b5a2b;
+            --error-color: #962d2d;
+            --error-bg: rgba(150, 45, 45, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(1.5rem, 4vh, 3rem) clamp(1.25rem, 3vw, 2.5rem);
+            line-height: 1.5;
+            text-rendering: geometricPrecision;
+            -webkit-font-smoothing: antialiased;
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1050px;
+            width: 100%;
+            margin: 0 auto;
+            user-select: none;
+        }
+
+        .logo {
+            background: none;
+            border: 0;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+            text-transform: lowercase;
+            padding: 0.25rem 0;
+            transition: color 160ms ease, transform 160ms ease;
+        }
+
+        .logo:hover {
+            transform: translateY(-1px);
+            opacity: 0.85;
+        }
+
+        /* Controls Panel Strips Layout Group */
+        .controls-utility-strip {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 1050px;
+            margin: clamp(0.5rem, 2vh, 1.25rem) auto 0 auto;
+            user-select: none;
+        }
+
+        .config-bar, .theme-bar {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 1.15rem;
+            padding: 0.45rem 0.8rem;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            color: var(--text-sub);
+            text-transform: lowercase;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .theme-bar {
+            margin-left: auto;
+        }
+
+        .config-group { display: flex; gap: 0.15rem; }
+        
+        .config-btn, .theme-btn {
+            appearance: none;
+            background: transparent;
+            border: 0;
+            border-radius: 6px;
+            color: var(--text-sub);
+            cursor: pointer;
+            font-weight: 500;
+            padding: 0.3rem 0.55rem;
+            text-transform: lowercase;
+            transition: all 140ms ease;
+        }
+        .config-btn:hover, .config-btn.active, .theme-btn:hover, .theme-btn.active { 
+            color: var(--text-main); 
+        }
+        .config-btn.active, .theme-btn.active {
+            background: rgba(255, 255, 255, 0.22);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+        :root[data-theme="zinc-dark"] .config-btn.active, 
+        :root[data-theme="zinc-dark"] .theme-btn.active {
+            background: rgba(244, 244, 245, 0.08);
+        }
+        
+        .config-btn.warn-toggle.active {
+            color: var(--error-color);
+            background: var(--error-bg);
+        }
+
+        .divider { width: 1px; height: 16px; background-color: var(--glass-border); }
+
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            max-width: 1050px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .live-hud-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 1.5rem;
+            min-height: 2.5rem;
+            font-weight: 700;
+            user-select: none;
+        }
+
+        #stats-live {
+            font-size: clamp(1.7rem, 3vw, 2.15rem);
+            color: var(--text-main);
+        }
+
+        .live-hud-metrics {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 1.1rem;
+            color: var(--text-sub);
+        }
+        .hud-metric span { color: var(--text-main); font-weight: 500; }
+
+        #words-wrapper {
+            position: relative;
+            width: 100%;
+            height: 140px; 
+            overflow: hidden;
+            font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+            line-height: 1.65; 
+            cursor: text;
+            border-radius: 12px;
+        }
+
+        #words-container {
+            display: flex;
+            flex-wrap: wrap;
+            column-gap: 1.2rem;
+            row-gap: 0;
+            color: var(--text-sub);
+            user-select: none;
+            transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .word {
+            display: inline-block;
+            position: relative;
+            border-bottom: 2px solid transparent;
+        }
+        .word.error { border-bottom: 2px solid var(--error-color); background: var(--error-bg); border-radius: 4px; }
+
+        .letter { position: relative; transition: color 90ms ease; }
+        .letter.correct { color: var(--text-main); }
+        .letter.incorrect { color: var(--error-color); }
+        .letter.extra { color: var(--error-color); filter: brightness(0.7); }
+
+        /* Smooth Floating Caret Engine (Monkeytype Physics Spec) */
+        #caret {
+            position: absolute;
+            width: 2px; 
+            height: 2.25rem;
+            background-color: var(--accent-glow);
+            border-radius: 999px;
+            box-shadow: 0 0 14px var(--accent-glow);
+            transform: translate3d(0, 0, 0);
+            /* Linear curve at 100ms matches exactly the smooth tracking response curve of Monkeytype */
+            transition: transform 0.1s linear;
+            animation: blink 1s infinite;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        #focus-error {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--glass-bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1rem;
+            z-index: 20;
+            cursor: pointer;
+            display: none;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        #hidden-input { position: absolute; opacity: 0; z-index: -100; width: 1px; height: 1px; }
+
+        /* Post-Test Dashboard Configurations */
+        #results-container {
+            display: none;
+            width: 100%;
+            flex-direction: column;
+            gap: 1.25rem;
+            opacity: 0;
+            margin-top: -2rem; 
+            transform: translateY(15px);
+            transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        #results-container.visible { opacity: 1; transform: translateY(0); }
+
+        .results-dashboard {
+            display: grid;
+            grid-template-columns: 1.2fr 2fr;
+            width: 100%;
+            gap: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.15rem;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 16px;
+            padding: 1.25rem 1.4rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .glass-card.wide { grid-column: span 2; }
+        .stat-label { color: var(--text-sub); font-size: 0.85rem; text-transform: lowercase; margin-bottom: 0.25rem;}
+        .stat-value { color: var(--text-main); font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 700; line-height: 1; }
+        .stat-value.sub-detail { font-size: 1.3rem; font-weight: 500; display: flex; gap: 0.75rem; margin-top: 0.4rem; }
+        
+        .char-correct { color: var(--text-main); }
+        .char-incorrect { color: var(--error-color); }
+
+        .chart-wrapper { height: 100%; min-height: 250px; position: relative; }
+        #chart-svg { width: 100%; height: 100%; overflow: visible; }
+
+        .analytics-matrix-row {
+            grid-column: span 2;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.15rem;
+        }
+        .matrix-meta-item { display: flex; flex-direction: column; gap: 0.15rem; }
+        .matrix-meta-val { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+
+        .controls { 
+            margin-top: 2rem; 
+            text-align: center; 
+            min-height: 2.8rem;
+            transition: opacity 180ms ease;
+        }
+        
+        #restart-btn {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(8px);
+            color: var(--text-sub);
+            font-size: 0.95rem;
+            cursor: pointer;
+            padding: 0.55rem 1.35rem;
+            border-radius: 8px;
+            transition: all 180ms ease;
+        }
+        #restart-btn:hover {
+            color: var(--text-main);
+            border-color: var(--accent-glow);
+            transform: translateY(-1px);
+        }
+
+        footer { text-align: center; color: var(--text-sub); opacity: 0.5; font-size: 0.78rem; }
+        kbd { background: rgba(0,0,0,0.04); border: 1px solid var(--glass-border); border-radius: 4px; padding: 2px 6px; }
+        :root[data-theme="zinc-dark"] kbd { background: rgba(244, 244, 245, 0.08); }
+
+        .restarting #words-container, .restarting #stats-live, .restarting .live-hud-metrics { opacity: 0; transform: translateY(5px); }
+
+        @media (max-width: 900px) {
+            .results-dashboard { grid-template-columns: 1fr; }
+            .glass-card.wide { grid-column: span 1; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .analytics-matrix-row { grid-template-columns: 1fr; }
+            #results-container { margin-top: 0; }
+        }
+    </style>
+</head>
+<body data-theme="zinc-dark">
+    <script>
+        document.documentElement.setAttribute("data-theme", "zinc-dark");
+    </script>
+
+    <header>
+        <button class="logo" id="logo-btn" type="button">keystroke</button>
+    </header>
+
+    <div class="controls-utility-strip">
+        <section class="config-bar" aria-label="Typing modifiers and configuration">
+            <div class="config-group" id="modifier-options">
+                <button class="config-btn" id="toggle-punctuation">punctuation</button>
+                <button class="config-btn" id="toggle-numbers">numbers</button>
+            </div>
+            <div class="divider"></div>
+            <div class="config-group" id="mode-options">
+                <button class="config-btn active" data-mode="time">time</button>
+                <button class="config-btn" data-mode="words">words</button>
+            </div>
+            <div class="divider"></div>
+            <div class="config-group" id="scale-options">
+                </div>
+            <div class="divider"></div>
+            <div class="config-group">
+                <button class="config-btn warn-toggle" id="toggle-sudden-death">no mistake</button>
+            </div>
+        </section>
+
+        <div class="theme-bar" aria-label="Theme Palette">
+            <button class="theme-btn active" data-theme="zinc-dark">zinc</button>
+            <button class="theme-btn" data-theme="frosted-glass">glass</button>
+            <button class="theme-btn" data-theme="nord-frost">nord</button>
+            <button class="theme-btn" data-theme="sepia-paper">sepia</button>
+        </div>
+    </div>
+
+    <main>
+        <input type="text" id="hidden-input" autocomplete="off" autocapitalize="off" spellcheck="false" autofocus>
+        
+        <div class="live-hud-container">
+            <div id="stats-live">30</div>
+            <div class="live-hud-metrics" id="live-hud">
+                <div class="hud-metric">wpm: <span id="live-wpm">0</span></div>
+                <div class="hud-metric">acc: <span id="live-acc">100%</span></div>
+            </div>
+        </div>
+
+        <div id="words-wrapper" tabindex="0">
+            <div id="focus-error">click canvas or press any key to focus</div>
+            <div id="caret"></div>
+            <div id="words-container"></div>
+        </div>
+
+        <section id="results-container">
+            <div class="results-dashboard">
+                <div class="stats-grid">
+                    <div class="glass-card">
+                        <div class="stat-label" id="lbl-net-wpm">net wpm</div>
+                        <div class="stat-value" id="wpm-val">0</div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="stat-label">accuracy</div>
+                        <div class="stat-value" id="acc-val">100%</div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="stat-label">raw wpm</div>
+                        <div class="stat-value" id="raw-val">0</div>
+                    </div>
+                    <div class="glass-card">
+                        <div class="stat-label">characters</div>
+                        <div class="stat-value sub-detail">
+                            <span class="char-correct" id="chars-correct-val">0</span>
+                            <span style="opacity:0.3">/</span>
+                            <span class="char-incorrect" id="chars-error-val">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card wide analytics-matrix-row">
+                        <div class="matrix-meta-item">
+                            <div class="stat-label">test type</div>
+                            <div class="matrix-meta-val" id="meta-test-type">time 30</div>
+                        </div>
+                        <div class="matrix-meta-item">
+                            <div class="stat-label">consistency</div>
+                            <div class="matrix-meta-val" id="meta-consistency">92%</div>
+                        </div>
+                        <div class="matrix-meta-item">
+                            <div class="stat-label">duration</div>
+                            <div class="matrix-meta-val" id="meta-duration">30s</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card chart-wrapper">
+                    <div class="stat-label" style="position:absolute; top:1.5rem; left:1.5rem;">performance timeline</div>
+                    <svg id="chart-svg" preserveAspectRatio="none"></svg>
+                </div>
+            </div>
+        </section>
+
+        <div class="controls">
+            <button id="restart-btn" type="button">restart test</button>
+        </div>
+    </main>
+
+    <footer>
+        <p>press <kbd>tab</kbd> at any time to instantly restart session</p>
+    </footer>
+
+    <script>
+        // Official Core Monkeytype Top 100 Word Set Dictionaries (Max Length Limit: 8 Characters Filtered)
+        const wordBank = ["the", "be", "to", "of", "and", "a", "in", "that", "have", "it", "for", "not", "on", "with", "he", "as", "you", "do", "at", "this", "but", "his", "by", "from", "they", "we", "say", "her", "she", "or", "an", "will", "my", "one", "all", "would", "there", "their", "what", "so", "up", "out", "if", "about", "who", "get", "which", "go", "me", "when", "make", "can", "like", "time", "no", "just", "him", "know", "take", "people", "into", "year", "your", "good", "some", "could", "them", "see", "other", "than", "then", "now", "look", "only", "come", "its", "over", "think", "also", "back", "after", "use", "two", "how", "our", "work", "first", "well", "way", "even", "new", "want", "any", "these", "give", "day", "most", "us"].filter(w => w.length <= 8);
+
+        class AudioSynthEngine {
+            constructor() { this.audioCtx = null; }
+            init() { if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+            playSwitchClick(isError = false) {
+                this.init(); if (!this.audioCtx) return;
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.connect(gain); gain.connect(this.audioCtx.destination);
+                const time = this.audioCtx.currentTime;
+                if (isError) {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(140, time);
+                    gain.gain.setValueAtTime(0.12, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+                    osc.start(time); osc.stop(time + 0.12);
+                } else {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(1600, time);
+                    osc.frequency.exponentialRampToValueAtTime(400, time + 0.03);
+                    gain.gain.setValueAtTime(0.08, time); gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+                    osc.start(time); osc.stop(time + 0.04);
+                }
+            }
+        }
+
+        class TypingTest {
+            constructor() {
+                this.currentMode = "time"; this.testDuration = 30; this.wordTargetCount = 25;
+                this.includePunctuation = false; this.includeNumbers = false; this.suddenDeathMode = false;
+                this.timeLeft = this.testDuration; this.wordsRemaining = this.wordTargetCount;
+                this.timerInterval = null; this.isTestRunning = false; this.isTestFinished = false;
+                this.currentWordIdx = 0; this.currentLetterIdx = 0; this.wordElements = [];
+                this.wpmTimeline = []; this.rawWpmTimeline = []; this.totalKeystrokes = 0; this.incorrectKeystrokes = 0;
+                this.caretFrame = null; this.isAtWordEndSpaceState = false;
+                this.audioEngine = new AudioSynthEngine();
+                this.domElements = {
+                    hiddenInput: document.getElementById("hidden-input"),
+                    wordsContainer: document.getElementById("words-container"),
+                    wordsWrapper: document.getElementById("words-wrapper"),
+                    caret: document.getElementById("caret"),
+                    focusError: document.getElementById("focus-error"),
+                    liveStats: document.getElementById("stats-live"),
+                    liveWpm: document.getElementById("live-wpm"),
+                    liveAcc: document.getElementById("live-acc"),
+                    resultsContainer: document.getElementById("results-container"),
+                    wpmDisplay: document.getElementById("wpm-val"),
+                    rawDisplay: document.getElementById("raw-val"),
+                    accDisplay: document.getElementById("acc-val"),
+                    correctCharsDisplay: document.getElementById("chars-correct-val"),
+                    errorCharsDisplay: document.getElementById("chars-error-val"),
+                    chartSvg: document.getElementById("chart-svg"),
+                    lblNetWpm: document.getElementById("lbl-net-wpm"),
+                    metaTestType: document.getElementById("meta-test-type"),
+                    metaConsistency: document.getElementById("meta-consistency"),
+                    metaDuration: document.getElementById("meta-duration"),
+                    restartBtn: document.getElementById("restart-btn")
+                };
+                this.initListeners(); 
+                this.updateScaleBarUI(); 
+                this.setupLayout();
+            }
+
+            initListeners() {
+                this.domElements.wordsWrapper.addEventListener("click", () => this.focusInput());
+                this.domElements.focusError.addEventListener("click", () => this.focusInput());
+                this.domElements.hiddenInput.addEventListener("focus", () => this.domElements.focusError.style.display = "none");
+                this.domElements.hiddenInput.addEventListener("blur", () => { if (!this.isTestFinished) this.domElements.focusError.style.display = "flex"; });
+                this.domElements.hiddenInput.addEventListener("keydown", (e) => this.handleKeyDown(e));
+                window.addEventListener("keydown", (e) => {
+                    if (e.key === "Tab" || e.key === "Escape") { e.preventDefault(); this.reset(); return; }
+                    if (document.activeElement !== this.domElements.hiddenInput && e.key.length === 1 && !this.isTestFinished) {
+                        if (e.key !== "Tab" && e.key !== "Enter") this.focusInput();
+                    }
+                });
+                document.getElementById("toggle-punctuation").addEventListener("click", (e) => { this.includePunctuation = !this.includePunctuation; e.currentTarget.classList.toggle("active", this.includePunctuation); this.reset(); });
+                document.getElementById("toggle-numbers").addEventListener("click", (e) => { this.includeNumbers = !this.includeNumbers; e.currentTarget.classList.toggle("active", this.includeNumbers); this.reset(); });
+                document.getElementById("toggle-sudden-death").addEventListener("click", (e) => { this.suddenDeathMode = !this.suddenDeathMode; e.currentTarget.classList.toggle("active", this.suddenDeathMode); this.reset(); });
+                document.querySelectorAll("#mode-options .config-btn").forEach(btn => {
+                    btn.addEventListener("click", (e) => {
+                        if (this.isTestRunning) return;
+                        document.querySelectorAll("#mode-options .config-btn").forEach(b => b.classList.remove("active"));
+                        e.currentTarget.classList.add("active");
+                        this.currentMode = e.currentTarget.dataset.mode;
+                        this.updateScaleBarUI(); this.reset();
+                    });
+                });
+            }
+
+            updateScaleBarUI() {
+                const scaleContainer = document.getElementById("scale-options"); 
+                scaleContainer.innerHTML = "";
+                const choices = this.currentMode === "time" ? [15, 30, 60] : [10, 25, 50];
+                
+                choices.forEach((num) => {
+                    const btn = document.createElement("button"); 
+                    btn.classList.add("config-btn");
+                    
+                    if (this.currentMode === "time" && this.testDuration === num) btn.classList.add("active");
+                    if (this.currentMode === "words" && this.wordTargetCount === num) btn.classList.add("active");
+                    
+                    btn.dataset.val = num; 
+                    btn.textContent = num;
+                    
+                    btn.addEventListener("click", (e) => {
+                        if (this.isTestRunning) return;
+                        document.querySelectorAll("#scale-options .config-btn").forEach(b => b.classList.remove("active"));
+                        e.currentTarget.classList.add("active");
+                        
+                        if (this.currentMode === "time") {
+                            this.testDuration = parseInt(e.currentTarget.dataset.val, 10);
+                        } else {
+                            this.wordTargetCount = parseInt(e.currentTarget.dataset.val, 10);
+                        }
+                        this.reset();
+                    });
+                    scaleContainer.appendChild(btn);
+                });
+            }
+
+            focusInput() { if (!this.isTestFinished) this.domElements.hiddenInput.focus(); }
+            generateModifierWord(baseWord, index) {
+                let finalWord = baseWord;
+                if (this.includeNumbers && Math.random() < 0.16) { finalWord = Math.floor(Math.random() * 90 + 10).toString(); }
+                else if (this.includePunctuation && (index === 0 || Math.random() < 0.12)) { finalWord = finalWord.charAt(0).toUpperCase() + finalWord.slice(1); }
+                return finalWord;
+            }
+            appendPunctuationSuffix(wordDiv, index, totalCount) {
+                if (!this.includePunctuation) return;
+                const puncPool = [".", ",", ";", "?", "!"]; const rand = Math.random(); let symbol = "";
+                if (index === totalCount - 1) symbol = "."; else if (rand < 0.07) symbol = puncPool[Math.floor(Math.random() * puncPool.length)];
+                if (symbol !== "") { const symSpan = document.createElement("span"); symSpan.classList.add("letter"); symSpan.textContent = symbol; wordDiv.appendChild(symSpan); }
+            }
+
+            setupLayout() {
+                clearInterval(this.timerInterval); if (this.caretFrame) cancelAnimationFrame(this.caretFrame);
+                this.timeLeft = this.testDuration; this.wordsRemaining = this.wordTargetCount;
+                this.isTestRunning = false; this.isTestFinished = false; this.currentWordIdx = 0; this.currentLetterIdx = 0;
+                this.wpmTimeline = []; this.rawWpmTimeline = []; this.totalKeystrokes = 0; this.incorrectKeystrokes = 0; this.isAtWordEndSpaceState = false;
+                this.domElements.liveStats.style.display = "";
+                this.domElements.liveStats.textContent = this.currentMode === "time" ? this.timeLeft : this.wordsRemaining;
+                this.domElements.liveWpm.textContent = "0"; this.domElements.liveAcc.textContent = "100%";
+                this.domElements.wordsContainer.style.display = "flex"; this.domElements.resultsContainer.style.display = "none";
+                this.domElements.resultsContainer.classList.remove("visible"); this.domElements.wordsContainer.style.transform = "translateY(0px)";
+                this.domElements.wordsContainer.innerHTML = ""; this.domElements.chartSvg.innerHTML = ""; this.domElements.hiddenInput.value = "";
+                this.domElements.caret.style.animation = ""; this.domElements.caret.style.opacity = "1";
+                this.domElements.restartBtn.style.opacity = "1";
+
+                const generationPoolSize = this.currentMode === "time" ? 100 : this.wordTargetCount;
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < generationPoolSize; i++) {
+                    const randWord = wordBank[Math.floor(Math.random() * wordBank.length)]; const calculatedWord = this.generateModifierWord(randWord, i);
+                    const wordDiv = document.createElement("div"); wordDiv.classList.add("word");
+                    for (let char of calculatedWord) { const letterSpan = document.createElement("span"); letterSpan.classList.add("letter"); letterSpan.textContent = char; wordDiv.appendChild(letterSpan); }
+                    this.appendPunctuationSuffix(wordDiv, i, generationPoolSize); wordDiv.dataset.baseLength = wordDiv.querySelectorAll(".letter").length; fragment.appendChild(wordDiv);
+                }
+                this.domElements.wordsContainer.appendChild(fragment); this.wordElements = Array.from(this.domElements.wordsContainer.children);
+                this.wordElements[0].classList.add("active"); this.scheduleCaret();
+            }
+
+            handleKeyDown(e) {
+                const key = e.key; if (key === "Tab") { e.preventDefault(); this.reset(); return; }
+                if (this.isTestFinished) { if (key === "Enter") this.reset(); return; }
+                if (!this.isTestRunning && key.length === 1 && key !== " ") { 
+                    this.isTestRunning = true;
+                    this.domElements.caret.style.animation = "none";
+                    this.domElements.caret.style.opacity = "1";
+                    this.domElements.restartBtn.style.opacity = "0"; 
+                    this.startClock(); 
+                }
+                const activeWord = this.wordElements[this.currentWordIdx]; if (!activeWord) return; let activeLetters = activeWord.querySelectorAll(".letter");
+                if (key === " ") {
+                    e.preventDefault(); if (this.currentLetterIdx === 0) return; this.audioEngine.playSwitchClick(false);
+                    if (this.isAtWordEndSpaceState) { this.commitWordTransition(); return; }
+                    let wordHasErrors = false; activeLetters.forEach((letter, index) => { if (index >= this.currentLetterIdx || letter.classList.contains("incorrect")) wordHasErrors = true; });
+                    if (wordHasErrors) { if (this.suddenDeathMode) { this.audioEngine.playSwitchClick(true); this.endSession(); return; } activeWord.classList.add("error"); }
+                    this.isAtWordEndSpaceState = true; this.scheduleCaret(); return;
+                }
+                if (key === "Backspace") {
+                    e.preventDefault(); this.audioEngine.playSwitchClick(false);
+                    if (this.isAtWordEndSpaceState) { this.isAtWordEndSpaceState = false; this.scheduleCaret(); return; }
+                    if (this.currentLetterIdx > 0) {
+                        this.currentLetterIdx--; const targetLetter = activeLetters[this.currentLetterIdx];
+                        if (targetLetter.classList.contains("extra")) targetLetter.remove(); else targetLetter.classList.remove("correct", "incorrect");
+                    } else if (this.currentLetterIdx === 0 && this.currentWordIdx > 0) {
+                        const prevWord = this.wordElements[this.currentWordIdx - 1]; activeWord.classList.remove("active"); prevWord.classList.remove("error"); prevWord.classList.add("active");
+                        this.currentWordIdx--; activeLetters = prevWord.querySelectorAll(".letter"); this.currentLetterIdx = activeLetters.length; this.isAtWordEndSpaceState = false;
+                    }
+                    this.scheduleCaret(); this.updateLiveHUD(); return;
+                }
+                if (key.length === 1 && !e.ctrlKey && !e.metaKey) {
+                    e.preventDefault(); if (this.isAtWordEndSpaceState) this.commitWordTransition(); this.totalKeystrokes++;
+                    const updatedActiveWord = this.wordElements[this.currentWordIdx]; const updatedLetters = updatedActiveWord.querySelectorAll(".letter"); const baseLen = Number(updatedActiveWord.dataset.baseLength);
+                    let wasIncorrect = false;
+                    if (this.currentLetterIdx < baseLen) {
+                        const targetLetter = updatedLetters[this.currentLetterIdx]; if (key === targetLetter.textContent) targetLetter.classList.add("correct"); else { targetLetter.classList.add("incorrect"); this.incorrectKeystrokes++; wasIncorrect = true; } this.currentLetterIdx++;
+                    } else {
+                        const extraSpan = document.createElement("span"); extraSpan.classList.add("letter", "incorrect", "extra"); extraSpan.textContent = key; updatedActiveWord.appendChild(extraSpan); this.currentLetterIdx++; this.incorrectKeystrokes++; wasIncorrect = true;
+                    }
+                    this.audioEngine.playSwitchClick(wasIncorrect); if (wasIncorrect && this.suddenDeathMode) { this.endSession(); return; }
+                    this.scheduleCaret(); this.updateLiveHUD();
+                }
+            }
+
+            commitWordTransition() {
+                const activeWord = this.wordElements[this.currentWordIdx]; if (activeWord) activeWord.classList.remove("active");
+                this.currentWordIdx++; this.currentLetterIdx = 0; this.isAtWordEndSpaceState = false;
+                if (this.currentMode === "words") { this.wordsRemaining = Math.max(0, this.wordTargetCount - this.currentWordIdx); this.domElements.liveStats.textContent = this.wordsRemaining; }
+                if (this.currentWordIdx >= this.wordElements.length || (this.currentMode === "words" && this.wordsRemaining <= 0)) this.endSession();
+                else this.wordElements[this.currentWordIdx].classList.add("active");
+                this.domElements.hiddenInput.value = ""; this.scheduleCaret();
+            }
+
+            scheduleCaret() { if (this.caretFrame) cancelAnimationFrame(this.caretFrame); this.caretFrame = requestAnimationFrame(() => this.positionCaret()); }
+            positionCaret() {
+                if (this.isTestFinished) return; const activeWord = this.wordElements[this.currentWordIdx]; if (!activeWord) return;
+                const letters = activeWord.querySelectorAll(".letter"); const wrapBox = this.domElements.wordsWrapper.getBoundingClientRect(); let x = 0, y = 0;
+                if (this.currentLetterIdx === 0) { const box = activeWord.getBoundingClientRect(); x = box.left - wrapBox.left; y = box.top - wrapBox.top; }
+                else { const prevBox = letters[this.currentLetterIdx - 1].getBoundingClientRect(); x = prevBox.right - wrapBox.left; y = prevBox.top - wrapBox.top; }
+                if (this.isAtWordEndSpaceState && letters.length > 0) { const lastLetterBox = letters[letters.length - 1].getBoundingClientRect(); x = lastLetterBox.right - wrapBox.left + 5; }
+                this.domElements.caret.style.transform = `translate3d(${x}px, ${y + 4}px, 0)`;
+                if (activeWord.offsetTop > 45) this.domElements.wordsContainer.style.transform = `translateY(-${activeWord.offsetTop - 45}px)`; else this.domElements.wordsContainer.style.transform = "translateY(0px)";
+            }
+
+            startClock() {
+                const startTime = performance.now();
+                this.timerInterval = setInterval(() => {
+                    let elapsedSec = (performance.now() - startTime) / 1000;
+                    if (this.currentMode === "time") { this.timeLeft = Math.max(0, this.testDuration - Math.floor(elapsedSec)); this.domElements.liveStats.textContent = this.timeLeft; if (this.timeLeft <= 0) { this.endSession(); return; } }
+                    else { this.domElements.liveStats.textContent = this.wordsRemaining; }
+                    const metrics = this.getInstantMetrics(elapsedSec); this.wpmTimeline.push(metrics.netWpm); this.rawWpmTimeline.push(metrics.rawWpm); this.domElements.liveWpm.textContent = metrics.netWpm;
+                }, 1000);
+            }
+
+            updateLiveHUD() { if (!this.isTestRunning) return; const accuracy = this.totalKeystrokes > 0 ? Math.round(((this.totalKeystrokes - this.incorrectKeystrokes) / this.totalKeystrokes) * 100) : 100; this.domElements.liveAcc.textContent = `${accuracy}%`; }
+            getInstantMetrics(passedSec) {
+                let correct = 0; this.wordElements.forEach((word, idx) => { if (idx <= this.currentWordIdx) { word.querySelectorAll(".letter").forEach(l => { if (l.classList.contains("correct")) correct++; }); } });
+                const totalCorrectChars = correct + this.currentWordIdx; if (passedSec <= 0) return { netWpm: 0, rawWpm: 0 };
+                const netWpm = Math.round((totalCorrectChars / 5) / (passedSec / 60)); const rawWpm = Math.round((this.totalKeystrokes / 5) / (passedSec / 60)); return { netWpm, rawWpm };
+            }
+
+            calculateConsistency() {
+                if (this.wpmTimeline.length < 2) return 95; let varianceSum = 0; const average = this.wpmTimeline.reduce((a,b)=>a+b, 0) / this.wpmTimeline.length; if (average === 0) return 100;
+                this.wpmTimeline.forEach(val => { varianceSum += Math.abs(val - average); }); const consistency = Math.round(100 - (varianceSum / this.wpmTimeline.length) / average * 100); return Math.max(50, Math.min(100, consistency));
+            }
+
+            endSession() {
+                clearInterval(this.timerInterval); this.isTestFinished = true; this.isTestRunning = false;
+                this.domElements.liveStats.style.display = "none"; this.domElements.wordsContainer.style.display = "none"; document.getElementById("live-hud").style.display = "none"; this.domElements.caret.style.animation = "none"; this.domElements.caret.style.opacity = "0";
+                this.domElements.restartBtn.style.opacity = "1";
+                
+                let finalCorrect = 0, finalIncorrect = 0; this.wordElements.forEach((w, idx) => { if (idx <= this.currentWordIdx) { w.querySelectorAll(".letter").forEach(l => { if (l.classList.contains("correct")) finalCorrect++; if (l.classList.contains("incorrect")) finalIncorrect++; }); } });
+                const totalFinalCorrectChars = finalCorrect + this.currentWordIdx; const runtimeSeconds = Math.max(1, this.wpmTimeline.length); const measuredMins = runtimeSeconds / 60;
+                const finalNetWpm = Math.max(0, Math.round((totalFinalCorrectChars / 5) / measuredMins)); const finalRawWpm = Math.max(0, Math.round((this.totalKeystrokes / 5) / measuredMins)); const accuracy = this.totalKeystrokes > 0 ? Math.round(((this.totalKeystrokes - this.incorrectKeystrokes) / this.totalKeystrokes) * 100) : 100;
+                this.domElements.metaTestType.textContent = `${this.currentMode} ${this.currentMode === 'time' ? this.testDuration : this.wordTargetCount}`; this.domElements.metaConsistency.textContent = `${this.calculateConsistency()}%`; this.domElements.metaDuration.textContent = `${runtimeSeconds}s`;
+                this.domElements.lblNetWpm.textContent = this.suddenDeathMode ? "net wpm (strict)" : "net wpm"; this.domElements.resultsContainer.style.display = "flex"; this.renderChart();
+                requestAnimationFrame(() => {
+                    this.domElements.resultsContainer.classList.add("visible"); this.animateVal(this.domElements.wpmDisplay, finalNetWpm); this.animateVal(this.domElements.rawDisplay, finalRawWpm); this.animateVal(this.domElements.accDisplay, accuracy, "%"); this.domElements.correctCharsDisplay.textContent = finalCorrect; this.domElements.errorCharsDisplay.textContent = finalIncorrect;
+                });
+            }
+
+            animateVal(el, target, suffix = "") {
+                const duration = 400; const start = performance.now();
+                function step(now) { const progress = Math.min((now - start) / duration, 1); const ease = 1 - Math.pow(1 - progress, 3); el.textContent = `${Math.round(target * ease)}${suffix}`; if (progress < 1) requestAnimationFrame(step); }
+                requestAnimationFrame(step);
+            }
+
+            renderChart() {
+                this.domElements.chartSvg.innerHTML = ""; if (this.wpmTimeline.length === 0) return;
+                const width = 650, height = 200; this.domElements.chartSvg.setAttribute("viewBox", `0 0 ${width} ${height}`); const padX = 20, padY = 20;
+                const maxVal = Math.max(...this.wpmTimeline, ...this.rawWpmTimeline, 40); const pointsNet = [], pointsRaw = []; const total = this.wpmTimeline.length;
+                for (let i = 0; i < total; i++) {
+                    const x = padX + (i / (total - 1 || 1)) * (width - padX * 2); const yNet = height - padY - (this.wpmTimeline[i] / maxVal) * (height - padY * 2); const yRaw = height - padY - (this.rawWpmTimeline[i] / maxVal) * (height - padY * 2);
+                    pointsNet.push(`${x},${yNet}`); pointsRaw.push(`${x},${yRaw}`);
+                }
+                const makePath = (pts) => `M ${pts.join(" L ")}`;
+                const pathRaw = document.createElementNS("http://www.w3.org/2000/svg", "path"); pathRaw.setAttribute("d", makePath(pointsRaw)); pathRaw.setAttribute("fill", "none"); pathRaw.setAttribute("stroke", "var(--text-sub)"); pathRaw.setAttribute("stroke-width", "2"); pathRaw.setAttribute("opacity", "0.35"); pathRaw.setAttribute("stroke-dasharray", "4 4"); this.domElements.chartSvg.appendChild(pathRaw);
+                const pathNet = document.createElementNS("http://www.w3.org/2000/svg", "path"); pathNet.setAttribute("d", makePath(pointsNet)); pathNet.setAttribute("fill", "none"); pathNet.setAttribute("stroke", "var(--text-main)"); pathNet.setAttribute("stroke-width", "3"); this.domElements.chartSvg.appendChild(pathNet);
+            }
+
+            reset() { document.body.classList.add("restarting"); document.getElementById("live-hud").style.display = "flex"; window.setTimeout(() => { document.body.classList.remove("restarting"); this.setupLayout(); this.focusInput(); }, 100); }
+        }
+
+        class ThemeEngine {
+            constructor(typingEngine) { this.engine = typingEngine; this.buttons = document.querySelectorAll(".theme-btn"); this.init(); }
+            init() { this.buttons.forEach(btn => { btn.addEventListener("click", (e) => { this.buttons.forEach(b => b.classList.remove("active")); e.currentTarget.classList.add("active"); document.documentElement.setAttribute("data-theme", e.currentTarget.dataset.theme); this.engine.reset(); }); }); }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => { const engine = new TypingTest(); new ThemeEngine(engine); document.getElementById("restart-btn").addEventListener("click", () => engine.reset()); document.getElementById("logo-btn").addEventListener("click", () => engine.reset()); });
+    </script>
+</body>
+</html>
